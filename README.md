@@ -1,214 +1,135 @@
---// TRAINING AIM SIMULATOR
---// Roblox Studio - NPC/Dummy Training Only
---// Coloque este LocalScript em:
---// StarterPlayer > StarterPlayerScripts
+--========================================================
+-- NEON PLAYER TRAINING SYSTEM
+-- UM ÚNICO LOCALSCRIPT
+-- Coloque em:
+-- StarterPlayer > StarterPlayerScripts
 --
---// Seus NPCs de treinamento devem ficar em:
---// workspace.TrainingNPCs
+-- Compatível com Players R6/R15
+-- RightShift = abrir/fechar painel
+--========================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
+local Camera = workspace.CurrentCamera
 
---==================================================
--- CONFIGURAÇÃO
---==================================================
+--========================================================
+-- CONFIGURAÇÕES
+--========================================================
 
-local CONFIG = {
-	AimEnabled = false,
+local Settings = {
+	Aim = false,
 	AimDistance = 200,
 	AimFOV = 120,
-	AimSmoothness = 0.18,
+	AimSmooth = 18,
 
-	ESPEnabled = false,
-	ESPDistance = 1000,
+	AllCheck = false,
+	AllCheckDistance = 3000,
 
-	SkeletonEnabled = false,
+	ESP = false,
+	ESPDistance = 3000,
 
-	NoclipEnabled = false,
+	Skeleton = false,
+	SkeletonDistance = 3000,
 
-	PanelOpen = true,
+	Noclip = false,
 
-	-- Apenas NPCs dentro desta pasta
-	NPCFolderName = "TrainingNPCs",
+	Panel = true,
 }
 
---==================================================
+--========================================================
 -- CORES
---==================================================
+--========================================================
 
-local NEON_PINK = Color3.fromRGB(255, 20, 180)
-local HOT_PINK = Color3.fromRGB(255, 0, 130)
-local PURPLE = Color3.fromRGB(125, 20, 180)
-local DARK = Color3.fromRGB(15, 8, 20)
-local DARK2 = Color3.fromRGB(25, 12, 32)
-local WHITE = Color3.fromRGB(255, 255, 255)
-local GREEN = Color3.fromRGB(80, 255, 150)
-local RED = Color3.fromRGB(255, 70, 90)
+local Pink = Color3.fromRGB(255, 20, 180)
+local Purple = Color3.fromRGB(150, 20, 220)
+local Dark = Color3.fromRGB(14, 8, 20)
+local Dark2 = Color3.fromRGB(27, 12, 34)
+local White = Color3.fromRGB(255, 255, 255)
+local Green = Color3.fromRGB(70, 255, 130)
+local Red = Color3.fromRGB(255, 60, 80)
+local Yellow = Color3.fromRGB(255, 210, 60)
 
---==================================================
--- UTILIDADES
---==================================================
+--========================================================
+-- GUI
+--========================================================
 
-local function getNPCFolder()
-	return Workspace:FindFirstChild(CONFIG.NPCFolderName)
-end
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "NeonPlayerSystem"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local function getHumanoid(model)
-	if not model then
-		return nil
-	end
-
-	return model:FindFirstChildOfClass("Humanoid")
-end
-
-local function getHead(model)
-	if not model then
-		return nil
-	end
-
-	return model:FindFirstChild("Head")
-end
-
-local function getRoot(model)
-	if not model then
-		return nil
-	end
-
-	return model:FindFirstChild("HumanoidRootPart")
-		or model.PrimaryPart
-end
-
-local function getDistance(model)
-	local character = LocalPlayer.Character
-	local root = character and getRoot(character)
-	local targetRoot = getRoot(model)
-
-	if not root or not targetRoot then
-		return math.huge
-	end
-
-	return (root.Position - targetRoot.Position).Magnitude
-end
-
-local function isValidNPC(model)
-	if not model or not model:IsA("Model") then
-		return false
-	end
-
-	local humanoid = getHumanoid(model)
-	local head = getHead(model)
-
-	if not humanoid or not head then
-		return false
-	end
-
-	if humanoid.Health <= 0 then
-		return false
-	end
-
-	return true
-end
-
-local function getNPCs()
-	local folder = getNPCFolder()
-	if not folder then
-		return {}
-	end
-
-	local result = {}
-
-	for _, object in ipairs(folder:GetChildren()) do
-		if isValidNPC(object) then
-			table.insert(result, object)
-		end
-	end
-
-	return result
-end
-
---==================================================
--- GUI PRINCIPAL
---==================================================
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "TrainingAimSimulator"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
---==================================================
+--========================================================
 -- FOV
---==================================================
+--========================================================
 
-local FOVCircle = Instance.new("Frame")
-FOVCircle.Name = "FOVCircle"
-FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-FOVCircle.Position = UDim2.fromScale(0.5, 0.5)
-FOVCircle.Size = UDim2.fromOffset(CONFIG.AimFOV * 2, CONFIG.AimFOV * 2)
-FOVCircle.BackgroundTransparency = 1
-FOVCircle.BorderSizePixel = 0
-FOVCircle.Visible = true
-FOVCircle.ZIndex = 2
-FOVCircle.Parent = ScreenGui
+local FOV = Instance.new("Frame")
+FOV.Name = "FOV"
+FOV.AnchorPoint = Vector2.new(0.5, 0.5)
+FOV.Position = UDim2.fromScale(0.5, 0.5)
+FOV.Size = UDim2.fromOffset(Settings.AimFOV * 2, Settings.AimFOV * 2)
+FOV.BackgroundTransparency = 1
+FOV.BorderSizePixel = 0
+FOV.Visible = true
+FOV.ZIndex = 1
+FOV.Parent = Gui
 
 local FOVCorner = Instance.new("UICorner")
 FOVCorner.CornerRadius = UDim.new(1, 0)
-FOVCorner.Parent = FOVCircle
+FOVCorner.Parent = FOV
 
 local FOVStroke = Instance.new("UIStroke")
-FOVStroke.Color = NEON_PINK
+FOVStroke.Color = Pink
 FOVStroke.Thickness = 2
 FOVStroke.Transparency = 0.15
-FOVStroke.Parent = FOVCircle
+FOVStroke.Parent = FOV
 
---==================================================
+--========================================================
 -- PAINEL
---==================================================
+--========================================================
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.fromOffset(420, 560)
-Main.Position = UDim2.new(0.5, -210, 0.5, -280)
-Main.BackgroundColor3 = DARK
+Main.Size = UDim2.fromOffset(430, 590)
+Main.Position = UDim2.new(0.5, -215, 0.5, -295)
+Main.BackgroundColor3 = Dark
 Main.BorderSizePixel = 0
 Main.ZIndex = 10
-Main.Parent = ScreenGui
+Main.Parent = Gui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 14)
+MainCorner.CornerRadius = UDim.new(0, 15)
 MainCorner.Parent = Main
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = NEON_PINK
+MainStroke.Color = Pink
 MainStroke.Thickness = 2
 MainStroke.Parent = Main
 
---==================================================
+--========================================================
 -- HEADER
---==================================================
+--========================================================
 
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 70)
-Header.BackgroundColor3 = DARK2
+Header.Size = UDim2.new(1, 0, 0, 72)
+Header.BackgroundColor3 = Dark2
 Header.BorderSizePixel = 0
 Header.ZIndex = 11
 Header.Parent = Main
 
 local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 14)
+HeaderCorner.CornerRadius = UDim.new(0, 15)
 HeaderCorner.Parent = Header
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -25, 0, 30)
 Title.Position = UDim2.fromOffset(15, 8)
 Title.BackgroundTransparency = 1
-Title.Text = "NEON AIM SIMULATOR"
-Title.TextColor3 = NEON_PINK
+Title.Text = "NEON PLAYER SYSTEM"
+Title.TextColor3 = Pink
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 20
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -217,452 +138,803 @@ Title.Parent = Header
 
 local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -25, 0, 20)
-Subtitle.Position = UDim2.fromOffset(15, 38)
+Subtitle.Position = UDim2.fromOffset(15, 40)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "NPC TRAINING MODE • RightShift"
+Subtitle.Text = "PLAYER • R6 / R15 • RIGHTSHIFT"
 Subtitle.TextColor3 = Color3.fromRGB(190, 150, 200)
 Subtitle.Font = Enum.Font.Gotham
-Subtitle.TextSize = 12
+Subtitle.TextSize = 11
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 Subtitle.ZIndex = 12
 Subtitle.Parent = Header
 
---==================================================
--- CONTAINER
---==================================================
+--========================================================
+-- SCROLL
+--========================================================
 
-local Content = Instance.new("ScrollingFrame")
-Content.Name = "Content"
-Content.Size = UDim2.new(1, -20, 1, -85)
-Content.Position = UDim2.fromOffset(10, 78)
-Content.BackgroundTransparency = 1
-Content.BorderSizePixel = 0
-Content.ScrollBarThickness = 4
-Content.ScrollBarImageColor3 = NEON_PINK
-Content.CanvasSize = UDim2.new(0, 0, 0, 700)
-Content.ZIndex = 11
-Content.Parent = Main
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -20, 1, -85)
+Scroll.Position = UDim2.fromOffset(10, 80)
+Scroll.BackgroundTransparency = 1
+Scroll.BorderSizePixel = 0
+Scroll.ScrollBarThickness = 4
+Scroll.ScrollBarImageColor3 = Pink
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
+Scroll.ZIndex = 11
+Scroll.Parent = Main
 
 local Layout = Instance.new("UIListLayout")
 Layout.Padding = UDim.new(0, 8)
 Layout.SortOrder = Enum.SortOrder.LayoutOrder
-Layout.Parent = Content
+Layout.Parent = Scroll
 
---==================================================
--- FUNÇÕES DE GUI
---==================================================
+--========================================================
+-- FUNÇÕES GUI
+--========================================================
 
-local function createSection(text)
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -10, 0, 30)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = NEON_PINK
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = 15
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.ZIndex = 12
-	label.Parent = Content
+local function Section(text)
 
-	return label
+	local Label = Instance.new("TextLabel")
+	Label.Size = UDim2.new(1, -10, 0, 30)
+	Label.BackgroundTransparency = 1
+	Label.Text = text
+	Label.TextColor3 = Pink
+	Label.Font = Enum.Font.GothamBold
+	Label.TextSize = 15
+	Label.TextXAlignment = Enum.TextXAlignment.Left
+	Label.ZIndex = 12
+	Label.Parent = Scroll
+
+	return Label
 end
 
-local function createToggle(text, default, callback)
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(1, -10, 0, 42)
-	button.BackgroundColor3 = DARK2
-	button.BorderSizePixel = 0
-	button.AutoButtonColor = false
-	button.Text = ""
-	button.ZIndex = 12
-	button.Parent = Content
+local function Toggle(text, initial, callback)
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = button
+	local Button = Instance.new("TextButton")
+	Button.Size = UDim2.new(1, -10, 0, 43)
+	Button.BackgroundColor3 = Dark2
+	Button.BorderSizePixel = 0
+	Button.Text = ""
+	Button.AutoButtonColor = false
+	Button.ZIndex = 12
+	Button.Parent = Scroll
 
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(70, 30, 80)
-	stroke.Thickness = 1
-	stroke.Parent = button
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 8)
+	Corner.Parent = Button
 
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -75, 1, 0)
-	label.Position = UDim2.fromOffset(15, 0)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = WHITE
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 14
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.ZIndex = 13
-	label.Parent = button
+	local Label = Instance.new("TextLabel")
+	Label.Size = UDim2.new(1, -85, 1, 0)
+	Label.Position = UDim2.fromOffset(15, 0)
+	Label.BackgroundTransparency = 1
+	Label.Text = text
+	Label.TextColor3 = White
+	Label.Font = Enum.Font.GothamMedium
+	Label.TextSize = 13
+	Label.TextXAlignment = Enum.TextXAlignment.Left
+	Label.ZIndex = 13
+	Label.Parent = Button
 
-	local status = Instance.new("TextLabel")
-	status.Size = UDim2.fromOffset(50, 25)
-	status.Position = UDim2.new(1, -60, 0.5, -12)
-	status.BackgroundColor3 = Color3.fromRGB(55, 25, 60)
-	status.TextColor3 = Color3.fromRGB(180, 150, 180)
-	status.Text = "OFF"
-	status.Font = Enum.Font.GothamBold
-	status.TextSize = 11
-	status.ZIndex = 13
-	status.Parent = button
+	local Status = Instance.new("TextLabel")
+	Status.Size = UDim2.fromOffset(55, 25)
+	Status.Position = UDim2.new(1, -67, 0.5, -12)
+	Status.BackgroundColor3 = Color3.fromRGB(55, 25, 60)
+	Status.TextColor3 = Color3.fromRGB(180, 150, 180)
+	Status.Font = Enum.Font.GothamBold
+	Status.TextSize = 11
+	Status.ZIndex = 13
+	Status.Parent = Button
 
-	local statusCorner = Instance.new("UICorner")
-	statusCorner.CornerRadius = UDim.new(0, 6)
-	statusCorner.Parent = status
+	local StatusCorner = Instance.new("UICorner")
+	StatusCorner.CornerRadius = UDim.new(0, 6)
+	StatusCorner.Parent = Status
 
-	local enabled = default
+	local Value = initial
 
 	local function update()
-		if enabled then
-			status.Text = "ON"
-			status.BackgroundColor3 = NEON_PINK
-			status.TextColor3 = WHITE
+		Status.Text = Value and "ON" or "OFF"
+
+		if Value then
+			Status.BackgroundColor3 = Pink
+			Status.TextColor3 = White
 		else
-			status.Text = "OFF"
-			status.BackgroundColor3 = Color3.fromRGB(55, 25, 60)
-			status.TextColor3 = Color3.fromRGB(180, 150, 180)
+			Status.BackgroundColor3 = Color3.fromRGB(55, 25, 60)
+			Status.TextColor3 = Color3.fromRGB(180, 150, 180)
 		end
 
-		callback(enabled)
+		callback(Value)
 	end
 
-	button.MouseButton1Click:Connect(function()
-		enabled = not enabled
+	Button.MouseButton1Click:Connect(function()
+		Value = not Value
 		update()
 	end)
 
 	update()
 
-	return button
+	return Button
 end
 
-local function createSlider(text, minValue, maxValue, defaultValue, callback)
-	local holder = Instance.new("Frame")
-	holder.Size = UDim2.new(1, -10, 0, 70)
-	holder.BackgroundColor3 = DARK2
-	holder.BorderSizePixel = 0
-	holder.ZIndex = 12
-	holder.Parent = Content
+local function Slider(text, minimum, maximum, default, callback)
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = holder
+	local Holder = Instance.new("Frame")
+	Holder.Size = UDim2.new(1, -10, 0, 68)
+	Holder.BackgroundColor3 = Dark2
+	Holder.BorderSizePixel = 0
+	Holder.ZIndex = 12
+	Holder.Parent = Scroll
 
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -30, 0, 25)
-	title.Position = UDim2.fromOffset(15, 5)
-	title.BackgroundTransparency = 1
-	title.TextColor3 = WHITE
-	title.Font = Enum.Font.GothamMedium
-	title.TextSize = 13
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Text = text
-	title.ZIndex = 13
-	title.Parent = holder
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 8)
+	Corner.Parent = Holder
 
-	local valueLabel = Instance.new("TextLabel")
-	valueLabel.Size = UDim2.fromOffset(80, 25)
-	valueLabel.Position = UDim2.new(1, -90, 0, 5)
-	valueLabel.BackgroundTransparency = 1
-	valueLabel.TextColor3 = NEON_PINK
-	valueLabel.Font = Enum.Font.GothamBold
-	valueLabel.TextSize = 13
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-	valueLabel.ZIndex = 13
-	valueLabel.Parent = holder
+	local Label = Instance.new("TextLabel")
+	Label.Size = UDim2.new(1, -100, 0, 25)
+	Label.Position = UDim2.fromOffset(15, 5)
+	Label.BackgroundTransparency = 1
+	Label.Text = text
+	Label.TextColor3 = White
+	Label.Font = Enum.Font.GothamMedium
+	Label.TextSize = 13
+	Label.TextXAlignment = Enum.TextXAlignment.Left
+	Label.ZIndex = 13
+	Label.Parent = Holder
 
-	local bar = Instance.new("Frame")
-	bar.Size = UDim2.new(1, -30, 0, 7)
-	bar.Position = UDim2.fromOffset(15, 43)
-	bar.BackgroundColor3 = Color3.fromRGB(55, 25, 60)
-	bar.BorderSizePixel = 0
-	bar.ZIndex = 13
-	bar.Parent = holder
+	local ValueLabel = Instance.new("TextLabel")
+	ValueLabel.Size = UDim2.fromOffset(80, 25)
+	ValueLabel.Position = UDim2.new(1, -90, 0, 5)
+	ValueLabel.BackgroundTransparency = 1
+	ValueLabel.TextColor3 = Pink
+	ValueLabel.Font = Enum.Font.GothamBold
+	ValueLabel.TextSize = 13
+	ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+	ValueLabel.ZIndex = 13
+	ValueLabel.Parent = Holder
 
-	local barCorner = Instance.new("UICorner")
-	barCorner.CornerRadius = UDim.new(1, 0)
-	barCorner.Parent = bar
+	local Bar = Instance.new("Frame")
+	Bar.Size = UDim2.new(1, -30, 0, 7)
+	Bar.Position = UDim2.fromOffset(15, 43)
+	Bar.BackgroundColor3 = Color3.fromRGB(55, 25, 60)
+	Bar.BorderSizePixel = 0
+	Bar.ZIndex = 13
+	Bar.Parent = Holder
 
-	local fill = Instance.new("Frame")
-	fill.Size = UDim2.new((defaultValue - minValue) / (maxValue - minValue), 0, 1, 0)
-	fill.BackgroundColor3 = NEON_PINK
-	fill.BorderSizePixel = 0
-	fill.ZIndex = 14
-	fill.Parent = bar
+	local BarCorner = Instance.new("UICorner")
+	BarCorner.CornerRadius = UDim.new(1, 0)
+	BarCorner.Parent = Bar
 
-	local fillCorner = Instance.new("UICorner")
-	fillCorner.CornerRadius = UDim.new(1, 0)
-	fillCorner.Parent = fill
+	local Fill = Instance.new("Frame")
+	Fill.BackgroundColor3 = Pink
+	Fill.BorderSizePixel = 0
+	Fill.ZIndex = 14
+	Fill.Parent = Bar
+
+	local FillCorner = Instance.new("UICorner")
+	FillCorner.CornerRadius = UDim.new(1, 0)
+	FillCorner.Parent = Fill
 
 	local dragging = false
-	local currentValue = defaultValue
 
 	local function setValue(value)
-		value = math.clamp(value, minValue, maxValue)
-		value = math.floor(value)
 
-		currentValue = value
+		value = math.clamp(
+			math.floor(value + 0.5),
+			minimum,
+			maximum
+		)
 
 		local percentage =
-			(value - minValue) /
-			(maxValue - minValue)
+			(value - minimum) /
+			(maximum - minimum)
 
-		fill.Size = UDim2.new(percentage, 0, 1, 0)
-		valueLabel.Text = tostring(value)
+		Fill.Size =
+			UDim2.new(
+				percentage,
+				0,
+				1,
+				0
+			)
+
+		ValueLabel.Text = tostring(value)
 
 		callback(value)
 	end
 
-	local function updateFromMouse(x)
-		local startX = bar.AbsolutePosition.X
-		local width = bar.AbsoluteSize.X
+	local function mouseValue(x)
 
-		local percentage = math.clamp(
-			(x - startX) / width,
-			0,
-			1
-		)
+		local start = Bar.AbsolutePosition.X
+		local width = Bar.AbsoluteSize.X
+
+		local percent =
+			math.clamp(
+				(x - start) / width,
+				0,
+				1
+			)
 
 		setValue(
-			minValue +
-			(maxValue - minValue) * percentage
+			minimum +
+			(maximum - minimum) * percent
 		)
 	end
 
-	bar.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	Bar.InputBegan:Connect(function(input)
+
+		if input.UserInputType ==
+			Enum.UserInputType.MouseButton1 then
+
 			dragging = true
-			updateFromMouse(input.Position.X)
+			mouseValue(input.Position.X)
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-			updateFromMouse(input.Position.X)
+
+		if dragging and
+			input.UserInputType ==
+			Enum.UserInputType.MouseMovement then
+
+			mouseValue(input.Position.X)
 		end
 	end)
 
 	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+		if input.UserInputType ==
+			Enum.UserInputType.MouseButton1 then
+
 			dragging = false
 		end
 	end)
 
-	setValue(defaultValue)
+	setValue(default)
 
-	return holder
+	return Holder
 end
 
---==================================================
+--========================================================
 -- AIM
---==================================================
+--========================================================
 
-createSection("🎯 AIM ASSIST")
+Section("🎯 AIM ASSIST")
 
-createToggle(
-	"Aim Assist • NPC Head",
+Toggle(
+	"Aim Assist • Player Head",
 	false,
 	function(value)
-		CONFIG.AimEnabled = value
+		Settings.Aim = value
 	end
 )
 
-createSlider(
+Slider(
 	"Aim Distance",
 	1,
 	200,
 	200,
 	function(value)
-		CONFIG.AimDistance = value
+		Settings.AimDistance = value
 	end
 )
 
-createSlider(
+Slider(
 	"Aim FOV",
 	1,
 	500,
 	120,
 	function(value)
-		CONFIG.AimFOV = value
-		FOVCircle.Size = UDim2.fromOffset(value * 2, value * 2)
+
+		Settings.AimFOV = value
+
+		FOV.Size =
+			UDim2.fromOffset(
+				value * 2,
+				value * 2
+			)
 	end
 )
 
-createSlider(
+Slider(
 	"Aim Smoothness",
 	1,
 	100,
 	18,
 	function(value)
-		CONFIG.AimSmoothness = value / 100
+
+		Settings.AimSmooth =
+			value / 100
 	end
 )
 
---==================================================
+--========================================================
+-- ALL CHECK
+--========================================================
+
+Section("🔎 ALL CHECK")
+
+Toggle(
+	"All Check • Visibility",
+	false,
+	function(value)
+
+		Settings.AllCheck = value
+	end
+)
+
+Slider(
+	"All Check Distance",
+	1,
+	3000,
+	3000,
+	function(value)
+
+		Settings.AllCheckDistance = value
+	end
+)
+
+--========================================================
 -- ESP
---==================================================
+--========================================================
 
-createSection("👁 ESP / ALL CHECK")
+Section("👁 ESP")
 
-createToggle(
-	"ESP",
+Toggle(
+	"ESP • Name / Health / Distance",
 	false,
 	function(value)
-		CONFIG.ESPEnabled = value
+
+		Settings.ESP = value
 	end
 )
 
-createToggle(
-	"Skeleton",
-	false,
-	function(value)
-		CONFIG.SkeletonEnabled = value
-	end
-)
-
-createSlider(
+Slider(
 	"ESP Distance",
 	1,
 	3000,
-	1000,
+	3000,
 	function(value)
-		CONFIG.ESPDistance = value
+
+		Settings.ESPDistance = value
 	end
 )
 
---==================================================
--- MOVIMENTO
---==================================================
+--========================================================
+-- SKELETON
+--========================================================
 
-createSection("🌀 MOVEMENT")
+Section("🦴 SKELETON")
 
-createToggle(
+Toggle(
+	"Skeleton • R6 / R15",
+	false,
+	function(value)
+
+		Settings.Skeleton = value
+	end
+)
+
+Slider(
+	"Skeleton Distance",
+	1,
+	3000,
+	3000,
+	function(value)
+
+		Settings.SkeletonDistance = value
+	end
+)
+
+--========================================================
+-- NOCLIP
+--========================================================
+
+Section("🌀 MOVEMENT")
+
+Toggle(
 	"Noclip",
 	false,
 	function(value)
-		CONFIG.NoclipEnabled = value
+
+		Settings.Noclip = value
 	end
 )
 
---==================================================
--- ESP SYSTEM
---==================================================
+--========================================================
+-- PERSONAGENS
+--========================================================
 
-local ESPObjects = {}
+local function CharacterOf(player)
+	return player.Character
+end
 
-local function destroyESP(model)
-	local data = ESPObjects[model]
+local function RootOf(character)
+	return character
+		and (
+			character:FindFirstChild("HumanoidRootPart")
+			or character:FindFirstChild("Torso")
+		)
+end
 
-	if data then
-		if data.billboard then
-			data.billboard:Destroy()
-		end
+local function HeadOf(character)
+	return character
+		and character:FindFirstChild("Head")
+end
 
-		if data.highlight then
-			data.highlight:Destroy()
-		end
+local function HumanoidOf(character)
+	return character
+		and character:FindFirstChildOfClass("Humanoid")
+end
 
-		if data.skeletonFolder then
-			data.skeletonFolder:Destroy()
-		end
+local function Alive(player)
 
-		ESPObjects[model] = nil
+	local character = CharacterOf(player)
+	local humanoid = HumanoidOf(character)
+
+	return character
+		and humanoid
+		and humanoid.Health > 0
+end
+
+local function DistanceFromPlayer(player)
+
+	local myCharacter = LocalPlayer.Character
+	local myRoot = RootOf(myCharacter)
+
+	local character = player.Character
+	local root = RootOf(character)
+
+	if not myRoot or not root then
+		return math.huge
+	end
+
+	return (
+		myRoot.Position -
+		root.Position
+	).Magnitude
+end
+
+--========================================================
+-- VISIBILIDADE / ALL CHECK
+--========================================================
+
+local function VisibleTarget(player)
+
+	local character = player.Character
+	local head = HeadOf(character)
+
+	if not head then
+		return false
+	end
+
+	local origin = Camera.CFrame.Position
+	local direction = head.Position - origin
+
+	local params = RaycastParams.new()
+
+	params.FilterType =
+		Enum.RaycastFilterType.Exclude
+
+	local filter = {
+		LocalPlayer.Character
+	}
+
+	params.FilterDescendantsInstances = filter
+
+	local result =
+		workspace:Raycast(
+			origin,
+			direction,
+			params
+		)
+
+	if not result then
+		return true
+	end
+
+	return result.Instance:IsDescendantOf(character)
+end
+
+--========================================================
+-- ALL CHECK HIGHLIGHT
+--========================================================
+
+local CheckHighlights = {}
+
+local function RemoveCheck(player)
+
+	local highlight =
+		CheckHighlights[player]
+
+	if highlight then
+		highlight:Destroy()
+		CheckHighlights[player] = nil
 	end
 end
 
-local function createESP(model)
-	if ESPObjects[model] then
-		return ESPObjects[model]
-	end
+local function UpdateCheck(player)
 
-	local head = getHead(model)
-	if not head then
+	if player == LocalPlayer then
 		return
 	end
 
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "TrainingESP"
-	billboard.Adornee = head
-	billboard.Size = UDim2.fromOffset(180, 70)
-	billboard.StudsOffset = Vector3.new(0, 2.8, 0)
-	billboard.AlwaysOnTop = true
-	billboard.Enabled = false
-	billboard.Parent = ScreenGui
+	local character = player.Character
 
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, 0, 0, 22)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = NEON_PINK
-	nameLabel.TextStrokeTransparency = 0.2
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.TextSize = 14
-	nameLabel.Parent = billboard
+	if not character or not Alive(player) then
+		RemoveCheck(player)
+		return
+	end
 
-	local distanceLabel = Instance.new("TextLabel")
-	distanceLabel.Size = UDim2.new(1, 0, 0, 18)
-	distanceLabel.Position = UDim2.fromOffset(0, 20)
-	distanceLabel.BackgroundTransparency = 1
-	distanceLabel.TextColor3 = WHITE
-	distanceLabel.TextStrokeTransparency = 0.2
-	distanceLabel.Font = Enum.Font.Gotham
-	distanceLabel.TextSize = 11
-	distanceLabel.Parent = billboard
+	local distance =
+		DistanceFromPlayer(player)
 
-	local healthBackground = Instance.new("Frame")
-	healthBackground.Size = UDim2.new(0.75, 0, 0, 6)
-	healthBackground.Position = UDim2.new(0.125, 0, 0, 43)
-	healthBackground.BackgroundColor3 = Color3.fromRGB(45, 20, 50)
-	healthBackground.BorderSizePixel = 0
-	healthBackground.Parent = billboard
+	if not Settings.AllCheck
+		or distance > Settings.AllCheckDistance then
 
-	local healthCorner = Instance.new("UICorner")
-	healthCorner.CornerRadius = UDim.new(1, 0)
-	healthCorner.Parent = healthBackground
+		RemoveCheck(player)
+		return
+	end
 
-	local healthBar = Instance.new("Frame")
-	healthBar.Size = UDim2.new(1, 0, 1, 0)
-	healthBar.BackgroundColor3 = GREEN
-	healthBar.BorderSizePixel = 0
-	healthBar.Parent = healthBackground
+	if not CheckHighlights[player] then
 
-	local healthBarCorner = Instance.new("UICorner")
-	healthBarCorner.CornerRadius = UDim.new(1, 0)
-	healthBarCorner.Parent = healthBar
+		local highlight =
+			Instance.new("Highlight")
 
-	local highlight = Instance.new("Highlight")
-	highlight.Name = "TrainingHighlight"
-	highlight.Adornee = model
-	highlight.FillColor = PURPLE
-	highlight.OutlineColor = NEON_PINK
-	highlight.FillTransparency = 0.8
+		highlight.Name =
+			"AllCheckHighlight"
+
+		highlight.Adornee =
+			character
+
+		highlight.DepthMode =
+			Enum.HighlightDepthMode.AlwaysOnTop
+
+		highlight.Parent =
+			character
+
+		CheckHighlights[player] =
+			highlight
+	end
+
+	local highlight =
+		CheckHighlights[player]
+
+	if VisibleTarget(player) then
+		highlight.FillColor = Green
+		highlight.OutlineColor = Green
+	else
+		highlight.FillColor = Red
+		highlight.OutlineColor = Red
+	end
+
+	highlight.FillTransparency = 0.82
 	highlight.OutlineTransparency = 0.1
-	highlight.Enabled = false
-	highlight.Parent = model
-
-	local skeletonFolder = Instance.new("Folder")
-	skeletonFolder.Name = "TrainingSkeleton"
-	skeletonFolder.Parent = model
-
-	ESPObjects[model] = {
-		billboard = billboard,
-		nameLabel = nameLabel,
-		distanceLabel = distanceLabel,
-		healthBar = healthBar,
-		highlight = highlight,
-		skeletonFolder = skeletonFolder,
-	}
-
-	return ESPObjects[model]
 end
 
---==================================================
--- SKELETON
---==================================================
+--========================================================
+-- ESP
+--========================================================
 
-local skeletonConnections = {
+local ESPData = {}
+
+local function RemoveESP(player)
+
+	local data = ESPData[player]
+
+	if data then
+
+		if data.Gui then
+			data.Gui:Destroy()
+		end
+
+		ESPData[player] = nil
+	end
+end
+
+local function CreateESP(player)
+
+	if ESPData[player] then
+		return ESPData[player]
+	end
+
+	local character =
+		player.Character
+
+	local head =
+		HeadOf(character)
+
+	if not head then
+		return nil
+	end
+
+	local Billboard =
+		Instance.new("BillboardGui")
+
+	Billboard.Name =
+		"PlayerESP"
+
+	Billboard.Adornee =
+		head
+
+	Billboard.Size =
+		UDim2.fromOffset(190, 75)
+
+	Billboard.StudsOffset =
+		Vector3.new(0, 3, 0)
+
+	Billboard.AlwaysOnTop = true
+	Billboard.Enabled = false
+	Billboard.Parent = Gui
+
+	local Name =
+		Instance.new("TextLabel")
+
+	Name.Size =
+		UDim2.new(1, 0, 0, 22)
+
+	Name.BackgroundTransparency = 1
+	Name.TextColor3 = Pink
+	Name.TextStrokeTransparency = 0.2
+	Name.Font = Enum.Font.GothamBold
+	Name.TextSize = 14
+	Name.Parent = Billboard
+
+	local Info =
+		Instance.new("TextLabel")
+
+	Info.Size =
+		UDim2.new(1, 0, 0, 20)
+
+	Info.Position =
+		UDim2.fromOffset(0, 20)
+
+	Info.BackgroundTransparency = 1
+	Info.TextColor3 = White
+	Info.TextStrokeTransparency = 0.2
+	Info.Font = Enum.Font.Gotham
+	Info.TextSize = 11
+	Info.Parent = Billboard
+
+	local Back =
+		Instance.new("Frame")
+
+	Back.Size =
+		UDim2.new(0.75, 0, 0, 7)
+
+	Back.Position =
+		UDim2.new(0.125, 0, 0, 47)
+
+	Back.BackgroundColor3 =
+		Color3.fromRGB(45, 20, 50)
+
+	Back.BorderSizePixel = 0
+	Back.Parent = Billboard
+
+	local BackCorner =
+		Instance.new("UICorner")
+
+	BackCorner.CornerRadius =
+		UDim.new(1, 0)
+
+	BackCorner.Parent = Back
+
+	local Health =
+		Instance.new("Frame")
+
+	Health.Size =
+		UDim2.new(1, 0, 1, 0)
+
+	Health.BackgroundColor3 =
+		Green
+
+	Health.BorderSizePixel = 0
+	Health.Parent = Back
+
+	local HealthCorner =
+		Instance.new("UICorner")
+
+	HealthCorner.CornerRadius =
+		UDim.new(1, 0)
+
+	HealthCorner.Parent = Health
+
+	ESPData[player] = {
+		Gui = Billboard,
+		Name = Name,
+		Info = Info,
+		Health = Health,
+	}
+
+	return ESPData[player]
+end
+
+local function UpdateESP(player)
+
+	if player == LocalPlayer then
+		return
+	end
+
+	if not Settings.ESP
+		or not Alive(player) then
+
+		RemoveESP(player)
+		return
+	end
+
+	local distance =
+		DistanceFromPlayer(player)
+
+	if distance > Settings.ESPDistance then
+
+		if ESPData[player] then
+			ESPData[player].Gui.Enabled = false
+		end
+
+		return
+	end
+
+	local data =
+		CreateESP(player)
+
+	if not data then
+		return
+	end
+
+	local humanoid =
+		HumanoidOf(player.Character)
+
+	data.Gui.Enabled = true
+
+	data.Name.Text =
+		player.DisplayName ..
+		"  @" ..
+		player.Name
+
+	data.Info.Text =
+		math.floor(distance) ..
+		" studs"
+
+	if humanoid then
+
+		local health =
+			math.clamp(
+				humanoid.Health /
+				math.max(humanoid.MaxHealth, 1),
+				0,
+				1
+			)
+
+		data.Health.Size =
+			UDim2.new(
+				health,
+				0,
+				1,
+				0
+			)
+
+		if health <= 0.25 then
+			data.Health.BackgroundColor3 = Red
+		elseif health <= 0.5 then
+			data.Health.BackgroundColor3 = Yellow
+		else
+			data.Health.BackgroundColor3 = Green
+		end
+	end
+end
+
+--========================================================
+-- SKELETON R6 / R15
+--========================================================
+
+local SkeletonData = {}
+
+local R6Bones = {
+	{"Head", "Torso"},
+	{"Torso", "Left Arm"},
+	{"Torso", "Right Arm"},
+	{"Torso", "Left Leg"},
+	{"Torso", "Right Leg"},
+}
+
+local R15Bones = {
 	{"Head", "UpperTorso"},
 	{"UpperTorso", "LowerTorso"},
 
@@ -683,108 +955,196 @@ local skeletonConnections = {
 	{"RightLowerLeg", "RightFoot"},
 }
 
-local function createSkeletonPart(folder, partA, partB)
-	if not partA or not partB then
+local function ClearSkeleton(player)
+
+	local folder =
+		SkeletonData[player]
+
+	if folder then
+		folder:Destroy()
+		SkeletonData[player] = nil
+	end
+end
+
+local function Bone(folder, a, b)
+
+	if not a or not b then
 		return
 	end
 
-	local midpoint =
-		(partA.Position + partB.Position) / 2
+	local length =
+		(a.Position - b.Position).Magnitude
+
+	if length <= 0 then
+		return
+	end
+
+	local middle =
+		(a.Position + b.Position) / 2
+
+	local part =
+		Instance.new("Part")
+
+	part.Name = "Bone"
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Material = Enum.Material.Neon
+	part.Color = Pink
+	part.Size =
+		Vector3.new(
+			0.045,
+			0.045,
+			length
+		)
+
+	part.CFrame =
+		CFrame.lookAt(
+			middle,
+			b.Position
+		)
+
+	part.Parent = folder
+end
+
+local function UpdateSkeleton(player)
+
+	if player == LocalPlayer then
+		return
+	end
+
+	if not Settings.Skeleton
+		or not Alive(player) then
+
+		ClearSkeleton(player)
+		return
+	end
 
 	local distance =
-		(partA.Position - partB.Position).Magnitude
+		DistanceFromPlayer(player)
 
-	local beam = Instance.new("Part")
-	beam.Name = "Bone"
-	beam.Anchored = true
-	beam.CanCollide = false
-	beam.CanTouch = false
-	beam.CanQuery = false
-	beam.Material = Enum.Material.Neon
-	beam.Color = NEON_PINK
-	beam.Size = Vector3.new(0.045, 0.045, distance)
-	beam.CFrame =
-		CFrame.lookAt(midpoint, partB.Position)
+	if distance > Settings.SkeletonDistance then
+		ClearSkeleton(player)
+		return
+	end
 
-	beam.Parent = folder
+	local character =
+		player.Character
+
+	if not character then
+		return
+	end
+
+	ClearSkeleton(player)
+
+	local folder =
+		Instance.new("Folder")
+
+	folder.Name =
+		"PlayerSkeleton"
+
+	folder.Parent =
+		workspace
+
+	SkeletonData[player] =
+		folder
+
+	local humanoid =
+		HumanoidOf(character)
+
+	local bones
+
+	if humanoid
+		and humanoid.RigType ==
+		Enum.HumanoidRigType.R15 then
+
+		bones = R15Bones
+	else
+		bones = R6Bones
+	end
+
+	for _, pair in ipairs(bones) do
+
+		local a =
+			character:FindFirstChild(pair[1])
+
+		local b =
+			character:FindFirstChild(pair[2])
+
+		Bone(
+			folder,
+			a,
+			b
+		)
+	end
 end
 
-local function updateSkeleton(model, data)
-	if not data then
-		return
-	end
+--========================================================
+-- TARGET AIM
+--========================================================
 
-	local folder = data.skeletonFolder
+local function GetTarget()
 
-	for _, child in ipairs(folder:GetChildren()) do
-		child:Destroy()
-	end
-
-	if not CONFIG.SkeletonEnabled then
-		return
-	end
-
-	if not CONFIG.ESPEnabled then
-		return
-	end
-
-	local distance = getDistance(model)
-
-	if distance > CONFIG.ESPDistance then
-		return
-	end
-
-	for _, connection in ipairs(skeletonConnections) do
-		local partA = model:FindFirstChild(connection[1])
-		local partB = model:FindFirstChild(connection[2])
-
-		if partA and partB then
-			createSkeletonPart(folder, partA, partB)
-		end
-	end
-end
-
---==================================================
--- AIM TARGET
---==================================================
-
-local function getClosestTarget()
 	local closest = nil
-	local closestScreenDistance = math.huge
+	local closestDistance = math.huge
 
-	local viewportCenter =
+	local center =
 		Vector2.new(
 			Camera.ViewportSize.X / 2,
 			Camera.ViewportSize.Y / 2
 		)
 
-	for _, npc in ipairs(getNPCs()) do
-		local head = getHead(npc)
+	for _, player in ipairs(Players:GetPlayers()) do
 
-		if head then
-			local worldDistance = getDistance(npc)
+		if player ~= LocalPlayer
+			and Alive(player) then
 
-			if worldDistance <= CONFIG.AimDistance then
+			local distance =
+				DistanceFromPlayer(player)
 
-				local screenPosition, visible =
-					Camera:WorldToViewportPoint(head.Position)
+			if distance <= Settings.AimDistance then
 
-				if visible and screenPosition.Z > 0 then
+				local head =
+					HeadOf(player.Character)
 
-					local screenPoint =
-						Vector2.new(
-							screenPosition.X,
-							screenPosition.Y
+				if head then
+
+					local screen,
+						onScreen =
+						Camera:WorldToViewportPoint(
+							head.Position
 						)
 
-					local screenDistance =
-						(screenPoint - viewportCenter).Magnitude
+					if onScreen
+						and screen.Z > 0 then
 
-					if screenDistance <= CONFIG.AimFOV then
+						local point =
+							Vector2.new(
+								screen.X,
+								screen.Y
+							)
 
-						if screenDistance < closestScreenDistance then
-							closestScreenDistance = screenDistance
-							closest = npc
+						local fovDistance =
+							(point - center).Magnitude
+
+						if fovDistance <= Settings.AimFOV then
+
+							-- All Check pode exigir
+							-- que o alvo esteja visível.
+							if not Settings.AllCheck
+								or VisibleTarget(player) then
+
+								if fovDistance <
+									closestDistance then
+
+									closestDistance =
+										fovDistance
+
+									closest =
+										player
+								end
+							end
 						end
 					end
 				end
@@ -795,174 +1155,166 @@ local function getClosestTarget()
 	return closest
 end
 
---==================================================
+--========================================================
 -- AIM LOOP
---==================================================
+--========================================================
 
 RunService.RenderStepped:Connect(function()
-	if not CONFIG.AimEnabled then
+
+	if not Settings.Aim then
 		return
 	end
 
-	local character = LocalPlayer.Character
+	local character =
+		LocalPlayer.Character
 
-	if not character then
+	local humanoid =
+		HumanoidOf(character)
+
+	if not humanoid
+		or humanoid.Health <= 0 then
 		return
 	end
 
-	local humanoid = getHumanoid(character)
+	local target =
+		GetTarget()
 
-	if not humanoid or humanoid.Health <= 0 then
+	if not target then
 		return
 	end
 
-	local target = getClosestTarget()
+	local head =
+		HeadOf(target.Character)
 
-	if target then
-		local head = getHead(target)
-
-		if head then
-			local cameraPosition = Camera.CFrame.Position
-
-			local desired =
-				CFrame.lookAt(
-					cameraPosition,
-					head.Position
-				)
-
-			Camera.CFrame =
-				Camera.CFrame:Lerp(
-					desired,
-					CONFIG.AimSmoothness
-				)
-		end
+	if not head then
+		return
 	end
+
+	local desired =
+		CFrame.lookAt(
+			Camera.CFrame.Position,
+			head.Position
+		)
+
+	Camera.CFrame =
+		Camera.CFrame:Lerp(
+			desired,
+			Settings.AimSmooth
+		)
 end)
 
---==================================================
--- ESP LOOP
---==================================================
+--========================================================
+-- ESP / CHECK / SKELETON LOOP
+--========================================================
 
-RunService.RenderStepped:Connect(function()
-	local currentNPCs = {}
+local skeletonTimer = 0
 
-	for _, npc in ipairs(getNPCs()) do
-		currentNPCs[npc] = true
+RunService.RenderStepped:Connect(function(delta)
 
-		local data = createESP(npc)
+	skeletonTimer += delta
 
-		if data then
-			local distance = getDistance(npc)
-			local humanoid = getHumanoid(npc)
+	for _, player in ipairs(Players:GetPlayers()) do
 
-			local visible =
-				CONFIG.ESPEnabled
-				and distance <= CONFIG.ESPDistance
+		if player ~= LocalPlayer then
 
-			data.billboard.Enabled = visible
-			data.highlight.Enabled = visible
+			UpdateCheck(player)
+			UpdateESP(player)
 
-			if visible then
-				data.nameLabel.Text = npc.Name
-
-				data.distanceLabel.Text =
-					math.floor(distance) .. " studs"
-
-				if humanoid then
-					local health =
-						math.clamp(
-							humanoid.Health /
-							math.max(humanoid.MaxHealth, 1),
-							0,
-							1
-						)
-
-					data.healthBar.Size =
-						UDim2.new(
-							health,
-							0,
-							1,
-							0
-						)
-
-					if health <= 0.25 then
-						data.healthBar.BackgroundColor3 = RED
-					elseif health <= 0.5 then
-						data.healthBar.BackgroundColor3 =
-							Color3.fromRGB(255, 190, 60)
-					else
-						data.healthBar.BackgroundColor3 = GREEN
-					end
-				end
+			-- Atualização controlada para não
+			-- recriar o skeleton centenas de vezes
+			if skeletonTimer >= 0.08 then
+				UpdateSkeleton(player)
 			end
-
-			updateSkeleton(npc, data)
 		end
 	end
 
-	for npc in pairs(ESPObjects) do
-		if not currentNPCs[npc] or not npc.Parent then
-			destroyESP(npc)
-		end
+	if skeletonTimer >= 0.08 then
+		skeletonTimer = 0
 	end
 end)
 
---==================================================
+--========================================================
 -- NOCLIP
---==================================================
+--========================================================
 
 RunService.Stepped:Connect(function()
-	if not CONFIG.NoclipEnabled then
+
+	if not Settings.Noclip then
 		return
 	end
 
-	local character = LocalPlayer.Character
+	local character =
+		LocalPlayer.Character
 
 	if not character then
 		return
 	end
 
-	for _, object in ipairs(character:GetDescendants()) do
+	for _, object in ipairs(
+		character:GetDescendants()
+	) do
+
 		if object:IsA("BasePart") then
 			object.CanCollide = false
 		end
 	end
 end)
 
---==================================================
--- RIGHT SHIFT
---==================================================
+--========================================================
+-- PLAYER ADDED / REMOVED
+--========================================================
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then
+local function SetupPlayer(player)
+
+	if player == LocalPlayer then
 		return
 	end
 
-	if input.KeyCode == Enum.KeyCode.RightShift then
+	player.CharacterRemoving:Connect(function()
 
-		CONFIG.PanelOpen = not CONFIG.PanelOpen
+		RemoveESP(player)
+		RemoveCheck(player)
+		ClearSkeleton(player)
+	end)
+end
 
-		Main.Visible = CONFIG.PanelOpen
-	end
+for _, player in ipairs(
+	Players:GetPlayers()
+) do
+	SetupPlayer(player)
+end
+
+Players.PlayerAdded:Connect(SetupPlayer)
+
+Players.PlayerRemoving:Connect(function(player)
+
+	RemoveESP(player)
+	RemoveCheck(player)
+	ClearSkeleton(player)
 end)
 
---==================================================
--- PAINEL ARRASTÁVEL
---==================================================
+--========================================================
+-- ARRASTAR PAINEL
+--========================================================
 
 local dragging = false
 local dragStart
 local startPosition
 
 Header.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+	if input.UserInputType ==
+		Enum.UserInputType.MouseButton1 then
 
 		dragging = true
 		dragStart = input.Position
 		startPosition = Main.Position
 
 		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
+
+			if input.UserInputState ==
+				Enum.UserInputState.End then
+
 				dragging = false
 			end
 		end)
@@ -970,11 +1322,13 @@ Header.InputBegan:Connect(function(input)
 end)
 
 UserInputService.InputChanged:Connect(function(input)
+
 	if not dragging then
 		return
 	end
 
-	if input.UserInputType ~= Enum.UserInputType.MouseMovement then
+	if input.UserInputType ~=
+		Enum.UserInputType.MouseMovement then
 		return
 	end
 
@@ -990,44 +1344,43 @@ UserInputService.InputChanged:Connect(function(input)
 		)
 end)
 
---==================================================
+--========================================================
+-- RIGHT SHIFT
+--========================================================
+
+UserInputService.InputBegan:Connect(function(input, processed)
+
+	if processed then
+		return
+	end
+
+	if input.KeyCode ==
+		Enum.KeyCode.RightShift then
+
+		Settings.Panel =
+			not Settings.Panel
+
+		Main.Visible =
+			Settings.Panel
+	end
+end)
+
+--========================================================
 -- ATUALIZAÇÃO DO FOV
---==================================================
+--========================================================
 
 RunService.RenderStepped:Connect(function()
-	FOVCircle.Position =
+
+	FOV.Position =
 		UDim2.fromOffset(
 			Camera.ViewportSize.X / 2,
 			Camera.ViewportSize.Y / 2
 		)
 end)
 
---==================================================
--- LIMPEZA AO REMOVER NPC
---==================================================
-
-Workspace.ChildRemoved:Connect(function(child)
-	if child.Name == CONFIG.NPCFolderName then
-
-		for npc in pairs(ESPObjects) do
-			destroyESP(npc)
-		end
-	end
-end)
-
---==================================================
--- CRIA PASTA AUTOMATICAMENTE
---==================================================
-
-if not Workspace:FindFirstChild(CONFIG.NPCFolderName) then
-	local folder = Instance.new("Folder")
-	folder.Name = CONFIG.NPCFolderName
-	folder.Parent = Workspace
-end
-
-print("==========================================")
-print(" NEON AIM SIMULATOR")
-print(" NPC TRAINING MODE")
-print(" RightShift = Abrir/Fechar")
-print(" Pasta: workspace.TrainingNPCs")
-print("==========================================")
+print("========================================")
+print(" NEON PLAYER SYSTEM")
+print(" R6 / R15")
+print(" AIM / ALL CHECK / ESP / SKELETON")
+print(" RIGHTSHIFT = PAINEL")
+print("========================================")
